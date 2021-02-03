@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="linkifyjs">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/node_modules/linkifyjs/dist/linkifyjs.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

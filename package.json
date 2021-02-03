@@ -6,6 +6,7 @@
     "scripts": {
         "start": "node server.js",
         "test": "grunt",
+        "start:docker": "docker-compose up",
         "licenses": "npm-license-crawler --production --csv ./licenses.csv",
         "build": "pkg --out-path dist/ package.json --options max_old_space_size=4096"
     },
