@@ -1,5 +1,8 @@
 #setup:
 #  addons:
 #    plan: heroku-redis
-docker:
-  web: Dockerfile
+build:
+  docker:
+    worker: Dockerfile
+  config:
+    NODE_ENV: production
