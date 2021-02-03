@@ -6,7 +6,7 @@ maxSize = "5M" # maximum size of an attachment when submitting or uploading mess
 
 [dbs]
 # redis connection
-redis = "redis://h:p248509087dec16dd1aca9516a6080af35da6dbb80f6e31134e1f9a6504c610b4@ec2-54-211-163-228.compute-1.amazonaws.com:6489"
+redis = "redis://127.0.0.1:6379/8"
 
 [log]
 level = "trace"

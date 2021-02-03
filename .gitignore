@@ -5,3 +5,6 @@ licenses.csv
 .env
 dist/
 yarn.lock
+
+# Local Netlify folder
+.netlify
