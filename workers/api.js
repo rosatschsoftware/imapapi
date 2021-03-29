@@ -124,7 +124,7 @@ const imapSchema = {
 const smtpSchema = {
     auth: Joi.object({
         user: Joi.string().max(256).required().example('myuser@gmail.com').description('Account username'),
-        pass: Joi.string().max(256).required().example('verysecret').description('Account password'),
+        pass: Joi.string().max(256).example('verysecret').description('Account password'),
         accessToken: Joi.string().max(4096).description('Access Token for OAuth2')
     })
         .xor('pass', 'accessToken')
@@ -148,6 +148,110 @@ const smtpSchema = {
         .description('Optional TLS configuration')
         .label('TLS')
 };
+
+const attachmentSchema = Joi.object({
+    id: Joi.string().example('AAAAAgAACrIyLjI').description('Attachment ID').label('AttachmentId'),
+    contentType: Joi.string().example('image/gif').description('Mime type of the attachment'),
+    encodedSize: Joi.number().example(48).description('Encoded size of the attachment. Actual file size is usually smaller depending on the encoding'),
+    embedded: Joi.boolean().example(true).description('Is this image used in HTML img tag'),
+    inline: Joi.boolean().example(true).description('Should this file be included in the message preview somehow'),
+    contentId: Joi.string().example('<unique-image-id@localhost>').description('Usually used only for embedded images')
+});
+
+const messageEntrySchema = Joi.object({
+    id: Joi.string().example('AAAAAgAACrI').description('Message ID').label('MessageEntryId'),
+    uid: Joi.number().example(12345).description('UID of the message').label('MessageUid'),
+    emailId: Joi.string().example('1694937972638499881').description('Globally unique ID (if server supports it)').label('MessageEmailId'),
+    threadId: Joi.string().example('1694936993596975454').description('Thread ID (if server supports it)').label('MessageThreadId'),
+    date: Joi.date().iso().example('2021-03-22T13:13:31.000Z').description('Date (internal)'),
+    draft: Joi.boolean().example(false).description('Is this message marked as a draft'),
+    unseen: Joi.boolean().example(true).description('Is this message unseen'),
+    flagged: Joi.boolean().example(true).description('Is this message marked as flagged'),
+    size: Joi.number().example(1040).description('Message size in bytes'),
+    subject: Joi.string().example('What a wonderful message').description('Message subject (decoded into unicode, applies to other string values as well)'),
+
+    from: addressSchema.example({ name: 'From Me', address: 'sender@example.com' }),
+
+    to: Joi.array()
+        .items(addressSchema)
+        .description('List of addresses')
+        .example([{ address: 'recipient@example.com' }])
+        .label('AddressList'),
+
+    cc: Joi.array().items(addressSchema).description('List of addresses').label('AddressList'),
+
+    bcc: Joi.array().items(addressSchema).description('List of addresses').label('AddressList'),
+    messageId: Joi.string().example('<test123@example.com>').description('Message ID'),
+    inReplyTo: Joi.string().example('<7JBUMt0WOn+_==MOkaCOQ@mail.gmail.com>').description('Replied Message ID'),
+
+    labels: Joi.array().items(Joi.string().example('\\Important')).description('Gmail labels').label('LabelList'),
+
+    attachments: Joi.array().items(attachmentSchema).description('List of attachments').label('AttachmentList'),
+
+    text: Joi.object({
+        id: Joi.string().example('AAAAAgAACqiTkaExkaEykA').description('Pointer to message text content'),
+        encodedSize: Joi.object({
+            plain: Joi.number().example(1013).description('How many bytes for plain text'),
+            html: Joi.number().example(1013).description('How many bytes for html content')
+        }).description('Encoded message part sizes')
+    }).label('TextInfo')
+}).label('MessageListEntry');
+
+const messageDetailsSchema = Joi.object({
+    id: Joi.string().example('AAAAAgAACrI').description('Message ID').label('MessageEntryId'),
+    uid: Joi.number().example(12345).description('UID of the message').label('MessageUid'),
+    emailId: Joi.string().example('1694937972638499881').description('Globally unique ID (if server supports it)').label('MessageEmailId'),
+    threadId: Joi.string().example('1694936993596975454').description('Thread ID (if server supports it)').label('MessageThreadId'),
+    date: Joi.date().iso().example('2021-03-22T13:13:31.000Z').description('Date (internal)'),
+    draft: Joi.boolean().example(false).description('Is this message marked as a draft'),
+    unseen: Joi.boolean().example(true).description('Is this message unseen'),
+    flagged: Joi.boolean().example(true).description('Is this message marked as flagged'),
+    size: Joi.number().example(1040).description('Message size in bytes'),
+    subject: Joi.string().example('What a wonderful message').description('Message subject (decoded into unicode, applies to other string values as well)'),
+
+    from: addressSchema.example({ name: 'From Me', address: 'sender@example.com' }),
+    sender: addressSchema.example({ name: 'From Me', address: 'sender@example.com' }),
+
+    to: Joi.array()
+        .items(addressSchema)
+        .description('List of addresses')
+        .example([{ address: 'recipient@example.com' }])
+        .label('AddressList'),
+
+    cc: Joi.array().items(addressSchema).description('List of addresses').label('AddressList'),
+
+    bcc: Joi.array().items(addressSchema).description('List of addresses').label('AddressList'),
+    messageId: Joi.string().example('<test123@example.com>').description('Message ID'),
+    inReplyTo: Joi.string().example('<7JBUMt0WOn+_==MOkaCOQ@mail.gmail.com>').description('Replied Message ID'),
+
+    flags: Joi.array().items(Joi.string().example('\\Seen')).description('IMAP flags').label('FlagList'),
+    labels: Joi.array().items(Joi.string().example('\\Important')).description('Gmail labels').label('LabelList'),
+
+    attachments: Joi.array().items(attachmentSchema).description('List of attachments').label('AttachmentList'),
+
+    headers: Joi.object()
+        .example({ from: ['From Me <sender@example.com>'], subject: ['What a wonderful message'] })
+        .description('Object where header key is object key and value is an array'),
+
+    text: Joi.object({
+        id: Joi.string().example('AAAAAgAACqiTkaExkaEykA').description('Pointer to message text content'),
+        encodedSize: Joi.object({
+            plain: Joi.number().example(1013).description('How many bytes for plain text'),
+            html: Joi.number().example(1013).description('How many bytes for html content')
+        }).description('Encoded message part sizes'),
+        plain: Joi.string().example('Hello from myself!').description('Plaintext content of the message'),
+        html: Joi.string().example('<p>Hello from myself!</p>').description('HTML content of the message'),
+        hasMore: Joi.boolean()
+            .example(false)
+            .description('If partial message content was requested then this value indicates if it includes all the content or there is more')
+    }).label('TextInfo')
+}).label('MessageListEntry');
+
+const messageListSchema = Joi.object({
+    page: Joi.number().example(0).description('Current page (0-based index)').label('PageNumber'),
+    pages: Joi.number().example(24).description('Total page count').label('PagesNumber'),
+    message: Joi.array().items(messageEntrySchema).label('PageMessages')
+}).label('MessageList');
 
 const failAction = async (request, h, err) => {
     let details = (err.details || []).map(detail => ({ message: detail.message, key: detail.context.key }));
@@ -246,7 +350,7 @@ parentPort.on('message', message => {
                     cmd: 'resp',
                     mid: message.mid,
                     error: err.message,
-                    cod: err.code,
+                    code: err.code,
                     statusCode: err.statusCode
                 });
             });
@@ -375,6 +479,14 @@ const init = async () => {
 
                     smtp: Joi.object(smtpSchema).allow(false).xor('useAuthServer', 'auth').description('SMTP configuration').label('SMTP')
                 }).label('CreateAccount')
+            },
+
+            response: {
+                schema: Joi.object({
+                    account: Joi.string().max(256).required().example('example').description('Account ID'),
+                    state: Joi.string().required().valid('existing', 'new').example('new').description('Is the account new or updated existing')
+                }).label('CreateAccountReponse'),
+                failAction: 'log'
             }
         }
     });
@@ -421,6 +533,13 @@ const init = async () => {
                     imap: Joi.object(imapSchema).xor('useAuthServer', 'auth').description('IMAP configuration').label('IMAP'),
                     smtp: Joi.object(smtpSchema).allow(false).xor('useAuthServer', 'auth').description('SMTP configuration').label('SMTP')
                 }).label('UpdateAccount')
+            },
+
+            response: {
+                schema: Joi.object({
+                    account: Joi.string().max(256).required().example('example').description('Account ID')
+                }).label('UpdateAccountReponse'),
+                failAction: 'log'
             }
         }
     });
@@ -433,7 +552,7 @@ const init = async () => {
             let accountObject = new Account({ redis, account: request.params.account, call });
 
             try {
-                return await accountObject.requestReconnect(request.payload);
+                return { reconnect: await accountObject.requestReconnect(request.payload) };
             } catch (err) {
                 if (Boom.isBoom(err)) {
                     throw err;
@@ -460,7 +579,14 @@ const init = async () => {
 
                 payload: Joi.object({
                     reconnect: Joi.boolean().truthy('Y', 'true', '1').falsy('N', 'false', 0).default(false).description('Only reconnect if true')
-                })
+                }).label('RequestReconnect')
+            },
+
+            response: {
+                schema: Joi.object({
+                    reconnect: Joi.boolean().truthy('Y', 'true', '1').falsy('N', 'false', 0).default(false).description('Only reconnect if true')
+                }).label('RequestReconnectReponse'),
+                failAction: 'log'
             }
         }
     });
@@ -496,7 +622,15 @@ const init = async () => {
 
                 params: Joi.object({
                     account: Joi.string().max(256).required().example('example').description('Account ID')
-                })
+                }).label('DeleteRequest')
+            },
+
+            response: {
+                schema: Joi.object({
+                    account: Joi.string().max(256).required().example('example').description('Account ID'),
+                    deleted: Joi.boolean().truthy('Y', 'true', '1').falsy('N', 'false', 0).default(true).description('Was the account deleted')
+                }).label('DeleteRequestReponse'),
+                failAction: 'log'
             }
         }
     });
@@ -559,6 +693,30 @@ const init = async () => {
                         .description('Filter accounts by state')
                         .label('AccountState')
                 }).label('AccountsFilter')
+            },
+
+            response: {
+                schema: Joi.object({
+                    accounts: Joi.array().items(
+                        Joi.object({
+                            account: Joi.string().max(256).required().example('example').description('Account ID'),
+                            name: Joi.string().max(256).example('My Email Account').description('Display name for the account'),
+                            state: Joi.string()
+                                .required()
+                                .valid('init', 'connecting', 'connected', 'authenticationError', 'connectError', 'unset', 'disconnected')
+                                .example('connected')
+                                .description('Account state'),
+                            syncTime: Joi.date().example('2021-02-17T13:43:18.860Z').description('Last sync time').iso(),
+                            lastError: Joi.object({
+                                response: Joi.string().example('Request to authentication server failed'),
+                                serverResponseCode: Joi.string().example('HTTPRequestError')
+                            })
+                                .allow(null)
+                                .label('AccountErrorEntry')
+                        }).label('AccountResponseItem')
+                    )
+                }).label('AccountsFilterReponse'),
+                failAction: 'log'
             }
         }
     });
@@ -596,6 +754,31 @@ const init = async () => {
                 params: Joi.object({
                     account: Joi.string().max(256).required().example('example').description('Account ID')
                 })
+            },
+
+            response: {
+                schema: Joi.object({
+                    mailboxes: Joi.array().items(
+                        Joi.object({
+                            path: Joi.string().required().example('Kalender/S&APw-nnip&AOQ-evad').description('Full path to mailbox').label('MailboxPath'),
+                            parentPath: Joi.string().required().example('Kalender').description('Full path to parent mailbox').label('MailboxParentPath'),
+                            name: Joi.string().required().example('Sünnipäevad').description('Maibox name').label('MailboxName'),
+                            listed: Joi.boolean().example(true).description('Was the mailbox found from the output of LIST command').label('MailboxListed'),
+                            subscribed: Joi.boolean()
+                                .example(true)
+                                .description('Was the mailbox found from the output of LSUB command')
+                                .label('MailboxSubscribed'),
+                            specialUse: Joi.string()
+                                .example('\\Sent')
+                                .valid('\\All', '\\Archive', '\\Drafts', '\\Flagged', '\\Junk', '\\Sent', '\\Trash', '\\Inbox')
+                                .description('Special use flag of the mailbox if set')
+                                .label('MailboxSpecialUse'),
+                            messages: Joi.number().example(120).description('Count of messages in mailbox').label('MailboxMessages'),
+                            uidNext: Joi.number().example(121).description('Next expected UID').label('MailboxMUidNext')
+                        }).label('MailboxResponseItem')
+                    )
+                }).label('MailboxesFilterReponse'),
+                failAction: 'log'
             }
         }
     });
@@ -638,9 +821,18 @@ const init = async () => {
                     path: Joi.array()
                         .items(Joi.string().max(256))
                         .example(['Parent folder', 'Subfolder'])
-                        .description('Mailbox path. Array elements are joined using valid path separator')
+                        .description('Mailbox path as an array. If account is namespaced then namespace prefix is added by default.')
                         .label('MailboxPath')
                 }).label('CreateMailbox')
+            },
+
+            response: {
+                schema: Joi.object({
+                    path: Joi.string().required().example('Kalender/S&APw-nnip&AOQ-evad').description('Full path to mailbox').label('MailboxPath'),
+                    mailboxId: Joi.string().example('1439876283476').description('Mailbox ID (if server has support)').label('MailboxId'),
+                    created: Joi.boolean().example(true).description('Was the mailbox created')
+                }).label('CreateMailboxReponse'),
+                failAction: 'log'
             }
         }
     });
@@ -682,6 +874,14 @@ const init = async () => {
                 query: Joi.object({
                     path: Joi.string().required().example('My Outdated Mail').description('Mailbox folder path to delete').label('MailboxPath')
                 }).label('DeleteMailbox')
+            },
+
+            response: {
+                schema: Joi.object({
+                    path: Joi.string().required().example('Kalender/S&APw-nnip&AOQ-evad').description('Full path to mailbox').label('MailboxPath'),
+                    deleted: Joi.boolean().example(true).description('Was the mailbox deleted')
+                }).label('DeleteMailboxReponse'),
+                failAction: 'log'
             }
         }
     });
@@ -718,8 +918,14 @@ const init = async () => {
                 params: Joi.object({
                     account: Joi.string().max(256).required().example('example').description('Account ID'),
                     message: Joi.string().base64({ paddingRequired: false, urlSafe: true }).max(256).example('AAAAAQAACnA').required().description('Message ID')
-                })
+                }).label('RawMessageRequest')
+            } /*,
+
+            response: {
+                schema: Joi.binary().example('MIME-Version: 1.0...').description('RFC822 formatted email').label('RawMessageResponse'),
+                failAction: 'log'
             }
+            */
         }
     });
 
@@ -811,6 +1017,11 @@ const init = async () => {
                     account: Joi.string().max(256).required().example('example').description('Account ID'),
                     message: Joi.string().base64({ paddingRequired: false, urlSafe: true }).max(256).required().example('AAAAAQAACnA').description('Message ID')
                 })
+            },
+
+            response: {
+                schema: messageDetailsSchema,
+                failAction: 'log'
             }
         }
     });
@@ -910,7 +1121,20 @@ const init = async () => {
 
                     messageId: Joi.string().max(74).example('<test123@example.com>').description('Message ID'),
                     headers: Joi.object().description('Custom Headers')
-                }).label('Message')
+                }).label('MessageUpload')
+            },
+
+            response: {
+                schema: Joi.object({
+                    id: Joi.string()
+                        .example('AAAAAgAACrI')
+                        .description('Message ID. NB! This and other fields might not be present if server did not provide enough information')
+                        .label('MessageAppendId'),
+                    path: Joi.string().example('INBOX').description('Folder this message was uploaded to').label('MessageAppendPath'),
+                    uid: Joi.number().example(12345).description('UID of uploaded message'),
+                    seq: Joi.number().example(12345).description('Sequence number of uploaded message')
+                }).label('MessageUploadResponse'),
+                failAction: 'log'
             }
         }
     });
@@ -956,7 +1180,19 @@ const init = async () => {
                         set: Joi.array().items(Joi.string().max(128)).description('Override all flags').example(['\\Seen', '\\Flagged']).label('SetFlags')
                     })
                         .description('Flag updates')
-                        .label('FlagUpdate')
+                        .label('FlagUpdate'),
+
+                    labels: Joi.object({
+                        add: Joi.array().items(Joi.string().max(128)).description('Add new labels').example(['Some label']).label('AddLabels'),
+                        delete: Joi.array().items(Joi.string().max(128)).description('Delete specific labels').example(['Some label']).label('DeleteLabels'),
+                        set: Joi.array()
+                            .items(Joi.string().max(128))
+                            .description('Override all labels')
+                            .example(['First label', 'Second label'])
+                            .label('SetLabels')
+                    })
+                        .description('Label updates')
+                        .label('LabelUpdate')
                 }).label('MessageUpdate')
             }
         }
@@ -1139,6 +1375,11 @@ const init = async () => {
                         .label('PageNumber'),
                     pageSize: Joi.number().min(1).max(1000).default(20).example(20).description('How many entries per page').label('PageSize')
                 }).label('MessageQuery')
+            },
+
+            response: {
+                schema: messageListSchema,
+                failAction: 'log'
             }
         }
     });
@@ -1256,6 +1497,11 @@ const init = async () => {
                         .description('Search query to filter messages')
                         .label('SearchQuery')
                 }).label('SearchQuery')
+            },
+
+            response: {
+                schema: messageListSchema,
+                failAction: 'log'
             }
         }
     });
@@ -1494,7 +1740,7 @@ const init = async () => {
             return getLogs(request.params.account);
         },
         options: {
-            description: 'Return IMAP logs for an account',
+            description: 'Return IMAP logs for an account. Output is a downloadable text file.',
             tags: ['api', 'logs'],
 
             validate: {
@@ -1556,6 +1802,33 @@ const init = async () => {
                     imap: Joi.object(imapSchema).description('IMAP configuration').label('IMAP'),
                     smtp: Joi.object(smtpSchema).allow(false).description('SMTP configuration').label('SMTP')
                 }).label('VerifyAccount')
+            },
+            response: {
+                schema: Joi.object({
+                    imap: Joi.object({
+                        success: Joi.boolean().example(true).description('Was IMAP account verified').label('VerifyImapSuccess'),
+                        error: Joi.string()
+                            .example('Something went wrong')
+                            .description('Error messages for IMAP verification. Only present if success=false')
+                            .label('VerifyImapError'),
+                        code: Joi.string()
+                            .example('ERR_SSL_WRONG_VERSION_NUMBER')
+                            .description('Error code. Only present if success=false')
+                            .label('VerifyImapCode')
+                    }),
+                    smtp: Joi.object({
+                        success: Joi.boolean().example(true).description('Was SMTP account verified').label('VerifySmtpSuccess'),
+                        error: Joi.string()
+                            .example('Something went wrong')
+                            .description('Error messages for SMTP verification. Only present if success=false')
+                            .label('VerifySmtpError'),
+                        code: Joi.string()
+                            .example('ERR_SSL_WRONG_VERSION_NUMBER')
+                            .description('Error code. Only present if success=false')
+                            .label('VerifySmtpCode')
+                    })
+                }).label('VerifyAccountReponse'),
+                failAction: 'log'
             }
         }
     });
@@ -1651,7 +1924,7 @@ async function verifyAccountInfo(accountData) {
             response.imap = {
                 success: false,
                 error: err.message,
-                cod: err.code,
+                code: err.code,
                 statusCode: err.statusCode
             };
         }
@@ -1667,7 +1940,7 @@ async function verifyAccountInfo(accountData) {
             response.smtp = {
                 success: false,
                 error: err.message,
-                cod: err.code,
+                code: err.code,
                 statusCode: err.statusCode
             };
         }
